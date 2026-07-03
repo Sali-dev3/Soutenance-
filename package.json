@@ -1,0 +1,10 @@
+{
+  "name": "projet-soutenance",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "python3 -m http.server 8080",
+    "open": "xdg-open http://localhost:8080",
+    "serve": "python3 -m http.server 8080"
+  }
+}
