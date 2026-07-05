@@ -252,12 +252,26 @@ body {
   cursor: pointer;
 }
 
-.profile-img-header {
+.profile-img-header,
+.profile-avatar-default {
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  object-fit: cover;
   border: 2px solid var(--color-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(59,130,246,0.15), rgba(37,99,235,0.2));
+  color: var(--color-primary);
+}
+
+.profile-img-header {
+  object-fit: cover;
+}
+
+.profile-avatar-default i {
+  width: 24px;
+  height: 24px;
 }
 
 .profile-badge-active {
