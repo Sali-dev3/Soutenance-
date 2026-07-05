@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ONEA Dashboard - WakatKoom</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: Outfit, Arial, sans-serif; background:#f4f8fb; color:#0f172a; }
+    .app { display:flex; flex-direction:column; min-height:100vh; }
+    .header { padding:18px 20px; background:linear-gradient(135deg,#2563EB,#10B981); color:white; display:flex; justify-content:space-between; align-items:center; }
+    .header h1 { margin:0; font-size:24px; }
+    .header .pill { background:rgba(255,255,255,0.18); padding:8px 12px; border-radius:999px; font-size:13px; }
+    .content { display:grid; grid-template-columns: 1.25fr 0.9fr; gap:20px; padding:20px; flex:1; }
+    .card { background:white; border-radius:24px; box-shadow:0 10px 28px rgba(15,23,42,0.08); overflow:hidden; }
+    .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; padding:16px; }
+    .stat { padding:14px; border-radius:16px; background:#f8fafc; }
+    .stat strong { display:block; font-size:24px; margin-top:6px; }
+    .controls { padding:16px; display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+    .controls input, .controls select, .controls button { padding:10px 12px; border-radius:12px; border:1px solid #dbe4ee; font-size:14px; }
+    .controls button { background:#2563EB; color:white; border:none; cursor:pointer; }
+    .map { height:360px; }
+    .list { padding:16px; max-height:420px; overflow:auto; }
+    .item { border:1px solid #e2e8f0; border-radius:16px; padding:12px; margin-bottom:10px; }
+    .item .top { display:flex; justify-content:space-between; gap:8px; align-items:center; }
+    .tag { display:inline-block; padding:6px 8px; border-radius:999px; font-size:12px; font-weight:700; }
+    .tag.nouveau { background:#dbeafe; color:#1d4ed8; }
+    .tag.en-cours { background:#fef3c7; color:#b45309; }
+    .tag.resolu { background:#dcfce7; color:#15803d; }
+    .login { max-width:420px; margin:60px auto; padding:24px; background:white; border-radius:24px; box-shadow:0 16px 36px rgba(15,23,42,0.12); }
+    .login input, .login button { width:100%; margin-top:10px; padding:12px; border-radius:12px; border:1px solid #dbe4ee; }
+    .login button { background:#2563EB; color:white; border:none; cursor:pointer; }
+    @media (max-width: 900px) { .content { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(2,1fr); } }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <div>
+        <h1>Tableau de bord ONEA</h1>
+        <p>Signalements vocaux et géolocalisés WakatKoom</p>
+      </div>
+      <div class="pill" id="session-pill">Connexion requise</div>
+    </div>
+
+    <div id="login-view" class="login">
+      <h2>Connexion agents ONEA</h2>
+      <input id="login-username" placeholder="Nom d'utilisateur" value="admin" />
+      <input id="login-password" type="password" placeholder="Mot de passe" value="onea2026" />
+      <button id="login-btn">Se connecter</button>
+    </div>
+
+    <div id="dashboard-view" hidden>
+      <div class="stats" id="stats-grid"></div>
+      <div class="content">
+        <div class="card">
+          <div class="controls">
+            <input id="search-input" placeholder="Rechercher un quartier ou un secteur" />
+            <select id="status-filter">
+              <option value="">Tous les statuts</option>
+              <option value="Nouveau">Nouveau</option>
+              <option value="En cours">En cours</option>
+              <option value="Résolu">Résolu</option>
+            </select>
+            <button id="refresh-btn">Actualiser</button>
+          </div>
+          <div id="map" class="map"></div>
+        </div>
+        <div class="card">
+          <div class="list" id="reports-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

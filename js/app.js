@@ -9,6 +9,18 @@ class WakatKoomApp {
     this.webcamStream = null;
     this.isMuted = false;
     this.isSpeakerOn = false;
+    this.homeAlertActive = false;
+    this.currentCoordinates = null;
+    this.currentAddress = null;
+    this.currentCity = "Ouagadougou";
+    this.sosMap = null;
+    this.sosMarker = null;
+    this.sosAudioBlob = null;
+    this.sosPhotoFile = null;
+    this.sosMediaRecorder = null;
+    this.sosMediaStream = null;
+    this.sosMediaChunks = [];
+    this.isSosRecording = false;
   }
 
   // --- INITIALISATION ---
@@ -16,7 +28,7 @@ class WakatKoomApp {
     this.updateClock();
     setInterval(() => this.updateClock(), 60000);
 
-    this.renderContactsGrid();
+    this.renderHomeDashboard();
     this.bindNavigationEvents();
     this.bindSOSEvents();
     this.bindAIEvents();
@@ -75,7 +87,7 @@ class WakatKoomApp {
           break;
         case "screen-home":
           window.WakatKoomVoice.speak(
-            "Écran d'accueil. Touchez la photo d'un contact pour lui envoyer un message, ou touchez le grand bouton en bas à droite pour parler à l'assistant WakatKoom.",
+            "Écran d'accueil. Choisissez une grande carte pour envoyer un message vocal, ouvrir l'assistant, signaler une coupure d'eau ou accéder aux paramètres.",
             null
           );
           break;
@@ -148,66 +160,145 @@ class WakatKoomApp {
     });
   }
 
-  // --- GRILL DES CONTACTS DÉCORÉS ---
-  renderContactsGrid() {
-    const listContainer = document.getElementById("contacts-list");
+  // --- TABLEAU DE BORD D'ACCUEIL ACCESSIBLE ---
+  renderHomeDashboard() {
+    const listContainer = document.getElementById("home-dashboard-grid");
+    if (!listContainer) return;
+
+    const actions = [
+      {
+        id: "voice",
+        title: "Envoyer un message vocal",
+        description: "Ouvre directement l'enregistrement vocal.",
+        icon: "mic",
+        variant: "voice",
+        badge: null,
+        onClick: () => {
+          const contact = window.CONTACTS.find(item => item.id === 1) || window.CONTACTS[0];
+          window.WakatKoomChat.openConversation(contact);
+          this.navigate("screen-chat");
+          window.WakatKoomVoice.speak("Appuyez pour enregistrer votre message vocal.", null);
+        }
+      },
+      {
+        id: "assistant",
+        title: "Assistant vocal IA",
+        description: "Suggestions vocales et avatar animé.",
+        icon: "bot",
+        variant: "assistant",
+        badge: null,
+        onClick: () => {
+          this.navigate("screen-ai");
+          window.WakatKoomVoice.speak("Assistant vocal activé. Dites simplement ce que vous voulez faire.", null);
+        }
+      },
+      {
+        id: "sos",
+        title: "Signaler une coupure d'eau",
+        description: "Accès rapide au module ONEA et au GPS.",
+        icon: "droplets",
+        variant: "sos",
+        badge: this.homeAlertActive ? "●" : null,
+        onClick: () => {
+          this.startSOS();
+        }
+      },
+      {
+        id: "position",
+        title: "Ma position",
+        description: "Carte OpenStreetMap et géolocalisation.",
+        icon: "map-pin",
+        variant: "position",
+        badge: null,
+        onClick: () => {
+          this.navigate("screen-sos");
+          this.updateCurrentLocation();
+          window.WakatKoomVoice.speak("Votre position actuelle est affichée sur la carte.", null);
+        }
+      },
+      {
+        id: "messages",
+        title: "Écouter mes messages",
+        description: "Lecture automatique des messages vocaux reçus.",
+        icon: "play-circle",
+        variant: "messages",
+        badge: null,
+        onClick: () => {
+          const contact = window.CONTACTS.find(item => item.id === 1) || window.CONTACTS[0];
+          window.WakatKoomChat.openConversation(contact);
+          this.navigate("screen-chat");
+          const lastReceived = contact.messages.filter(msg => msg.sender === "them").slice(-1)[0];
+          if (lastReceived) {
+            window.WakatKoomVoice.speak(`Vous avez un nouveau message de ${contact.name}. ${lastReceived.text}`, null);
+          }
+        }
+      },
+      {
+        id: "language",
+        title: "Changer la langue",
+        description: "Français, Mooré, Dioula, Fulfuldé et English.",
+        icon: "languages",
+        variant: "language",
+        badge: null,
+        onClick: () => {
+          this.navigate("screen-settings");
+          window.WakatKoomVoice.speak("Choisissez votre langue préférée.", null);
+        }
+      },
+      {
+        id: "call",
+        title: "Appel vocal",
+        description: "Lance rapidement un appel vocal simplifié.",
+        icon: "phone",
+        variant: "call",
+        badge: null,
+        onClick: () => {
+          const contact = window.CONTACTS.find(item => item.id === 1) || window.CONTACTS[0];
+          this.startCall(contact, false);
+        }
+      },
+      {
+        id: "settings",
+        title: "Paramètres",
+        description: "Accessibilité, taille, vibrations et synthèse vocale.",
+        icon: "sliders",
+        variant: "settings",
+        badge: null,
+        onClick: () => {
+          this.navigate("screen-settings");
+          window.WakatKoomVoice.speak("Paramètres d'accessibilité et de confort.", null);
+        }
+      }
+    ];
+
     listContainer.innerHTML = "";
 
-    window.CONTACTS.forEach(contact => {
-      const card = document.createElement("div");
-      card.className = "contact-card";
-      card.setAttribute("id", `contact-card-${contact.id}`);
+    actions.forEach(action => {
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = `dashboard-card dashboard-card--${action.variant}`;
+      card.setAttribute("aria-label", action.title);
 
-      // Création de l'avatar avec badge
-      const avatarWrapper = document.createElement("div");
-      avatarWrapper.className = "contact-avatar-wrapper";
+      card.innerHTML = `
+        <div class="dashboard-card-icon">
+          <i data-lucide="${action.icon}"></i>
+        </div>
+        <div class="dashboard-card-content">
+          <h3>${action.title}</h3>
+          <p>${action.description}</p>
+        </div>
+        ${action.badge ? `<span class="dashboard-card-badge is-active">${action.badge}</span>` : ""}
+      `;
 
-      const avatar = document.createElement("img");
-      avatar.src = contact.avatar;
-      avatar.alt = contact.name;
-      avatar.className = "contact-avatar";
-      
-      // Fallback si l'image générée n'est pas encore prête
-      avatar.onerror = () => {
-        avatar.src = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(contact.name)}&backgroundColor=2e8b57`;
-      };
-
-      avatarWrapper.appendChild(avatar);
-
-      // Simuler des notifications non lues sur le premier contact
-      if (contact.id === 1) {
-        const badge = document.createElement("div");
-        badge.className = "contact-badge-unread";
-        badge.innerText = "1";
-        avatarWrapper.appendChild(badge);
-      }
-
-      const name = document.createElement("h3");
-      name.className = "contact-name";
-      name.innerText = contact.name;
-
-      const role = document.createElement("span");
-      role.className = "contact-role";
-      role.innerText = contact.role;
-
-      card.appendChild(avatarWrapper);
-      card.appendChild(name);
-      card.appendChild(role);
-
-      // Au clic, on ouvre le chat du contact
       card.addEventListener("click", () => {
-        window.WakatKoomChat.openConversation(contact);
-        this.navigate("screen-chat");
-      });
-
-      // Gestion d'un appui long ou clic droit pour annoncer le nom vocalement
-      card.addEventListener("contextmenu", (e) => {
-        e.preventDefault();
-        window.WakatKoomVoice.speak(contact.voiceLabel, null);
+        this.triggerVibration();
+        action.onClick();
       });
 
       listContainer.appendChild(card);
     });
+
+    lucide.createIcons();
   }
 
   // --- LOGIQUE SOS URGENCE ---
@@ -218,14 +309,23 @@ class WakatKoomApp {
     const locationBtn = document.getElementById("btn-get-location");
     const sosReport = document.getElementById("btn-sos-report");
     const sosExit = document.getElementById("btn-sos-exit");
+    const recordBtn = document.getElementById("btn-sos-record");
+    const photoBtn = document.getElementById("btn-sos-photo");
+    const photoInput = document.getElementById("sos-photo-input");
 
-    sosTrigger.addEventListener("click", () => {
-      this.startSOS();
-    });
+    this.initLeafletMap();
 
-    sosCancel.addEventListener("click", () => {
-      this.cancelSOS();
-    });
+    if (sosTrigger) {
+      sosTrigger.addEventListener("click", () => {
+        this.startSOS();
+      });
+    }
+
+    if (sosCancel) {
+      sosCancel.addEventListener("click", () => {
+        this.cancelSOS();
+      });
+    }
 
     if (sosBack) {
       sosBack.addEventListener("click", () => {
@@ -239,10 +339,19 @@ class WakatKoomApp {
       });
     }
 
-    const sosTriggerHome = document.getElementById("btn-sos-trigger-home");
-    if (sosTriggerHome) {
-      sosTriggerHome.addEventListener("click", () => {
-        this.startSOS();
+    if (recordBtn) {
+      recordBtn.addEventListener("click", () => {
+        this.toggleSosRecording(recordBtn);
+      });
+    }
+
+    if (photoBtn && photoInput) {
+      photoBtn.addEventListener("click", () => {
+        photoInput.click();
+      });
+      photoInput.addEventListener("change", () => {
+        this.sosPhotoFile = photoInput.files[0] || null;
+        this.renderPhotoPreview();
       });
     }
 
@@ -276,17 +385,16 @@ class WakatKoomApp {
   }
 
   startSOS() {
+    this.homeAlertActive = true;
+    this.renderHomeDashboard();
     this.navigate("screen-sos");
     this.updateCurrentLocation();
-    
+
     let countdown = 3;
     const countdownNumber = document.getElementById("sos-countdown-number");
     countdownNumber.innerText = countdown;
 
-    // Lancer les instructions vocales d'alerte
     window.WakatKoomVoice.speak("SOS d'urgence enclenché. Annulez avant la fin du décompte si c'est une erreur.", null);
-
-    // Lancer la sirène à chaque seconde
     window.WakatKoomVoice.playBeep(880, 200);
 
     this.sosTimer = setInterval(() => {
@@ -302,37 +410,102 @@ class WakatKoomApp {
     }, 1000);
   }
 
-  triggerSOSAlertFinal() {
-    // Jouer une vraie sirène continue
-    window.WakatKoomVoice.playSiren(5);
-    
-    // Message de détresse envoyé
-    window.WakatKoomVoice.speak(
-      "SOS activé ! Votre position GPS a été envoyée par SMS d'urgence à la police ainsi qu'à Fatou et Inoussa. L'application reste en veille sonore.", 
-      null
-    );
+  initLeafletMap() {
+    const mapElement = document.getElementById("sos-map");
+    if (!mapElement || this.sosMap) return;
 
-    // Vibration longue
-    if (navigator.vibrate) {
-      navigator.vibrate([500, 250, 500, 250, 500]);
-    }
+    this.sosMap = L.map("sos-map", { zoomControl: true, scrollWheelZoom: false }).setView([12.3714, -1.5197], 13);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "© OpenStreetMap contributors"
+    }).addTo(this.sosMap);
 
-    // Afficher des coordonnées changeantes pour faire réel
-    document.getElementById("sos-coordinates").innerText = "Ouagadougou (12.3714° N, 1.5197° W) - SMS Envoyé";
+    this.sosMarker = L.marker([12.3714, -1.5197]).addTo(this.sosMap);
+    this.sosMarker.bindPopup("Position de départ").openPopup();
   }
 
-  cancelSOS() {
-    clearInterval(this.sosTimer);
-    window.WakatKoomVoice.stopSpeaking();
-    window.WakatKoomVoice.playBeep(330, 150); // Bip bas pour indiquer l'annulation
-    window.WakatKoomVoice.speak("Alerte annulée.", () => {
-      this.navigate("screen-home");
+  updateSosMap(lat, lon, label = "Votre position") {
+    if (!this.sosMap) this.initLeafletMap();
+    if (!this.sosMap) return;
+
+    this.sosMap.setView([lat, lon], 15);
+    this.sosMarker.setLatLng([lat, lon]).bindPopup(label).openPopup();
+  }
+
+  renderPhotoPreview() {
+    const preview = document.getElementById("sos-photo-preview");
+    if (!preview) return;
+
+    if (!this.sosPhotoFile) {
+      preview.innerHTML = "";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      preview.innerHTML = `<img src="${reader.result}" alt="Photo jointe" />`;
+    };
+    reader.readAsDataURL(this.sosPhotoFile);
+  }
+
+  async toggleSosRecording(button) {
+    if (!this.isSosRecording) {
+      try {
+        this.sosMediaChunks = [];
+        this.sosMediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        this.sosMediaRecorder = new MediaRecorder(this.sosMediaStream);
+        this.sosMediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) this.sosMediaChunks.push(event.data);
+        };
+        this.sosMediaRecorder.onstop = () => {
+          this.sosAudioBlob = new Blob(this.sosMediaChunks, { type: "audio/webm" });
+          if (button) {
+            button.querySelector("span").textContent = "Enregistrement prêt";
+          }
+        };
+        this.sosMediaRecorder.start();
+        this.isSosRecording = true;
+        if (button) {
+          button.classList.add("is-recording");
+          button.querySelector("span").textContent = "Arrêter";
+        }
+        window.WakatKoomVoice.speak("Enregistrement en cours. Parlez clairement pour laisser votre message vocal.", null);
+      } catch (error) {
+        console.warn("Micro indisponible", error);
+        this.showToastMessage("Micro indisponible. Le signalement sera envoyé sans message vocal.");
+      }
+    } else {
+      if (this.sosMediaRecorder && this.sosMediaRecorder.state !== "inactive") {
+        this.sosMediaRecorder.stop();
+        this.sosMediaStream.getTracks().forEach(track => track.stop());
+      }
+      this.isSosRecording = false;
+      if (button) {
+        button.classList.remove("is-recording");
+      }
+      window.WakatKoomVoice.speak("Message vocal enregistré.", null);
+    }
+  }
+
+  async getCurrentCoordinates() {
+    if (this.currentCoordinates) {
+      return this.currentCoordinates;
+    }
+
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error("Géolocalisation non disponible"));
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (position) => resolve({ latitude: position.coords.latitude, longitude: position.coords.longitude }),
+        reject,
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+      );
     });
   }
 
-  updateCurrentLocation() {
+  async updateCurrentLocation() {
     const coordsEl = document.getElementById("sos-coordinates");
-    const mapFrame = document.getElementById("sos-map-iframe");
     if (!coordsEl) return;
 
     if (!navigator.geolocation) {
@@ -343,29 +516,13 @@ class WakatKoomApp {
 
     coordsEl.innerText = "Obtention de la position…";
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      async (position) => {
         const { latitude, longitude, accuracy } = position.coords;
+        this.currentCoordinates = { latitude, longitude };
+        this.updateSosMap(latitude, longitude, "Votre position actuelle");
         coordsEl.innerText = `Latitude ${latitude.toFixed(5)}°, Longitude ${longitude.toFixed(5)}°`;
+        await this.reverseGeocode(latitude, longitude, accuracy);
         window.WakatKoomVoice.speak("Position GPS récupérée.", null);
-        if (mapFrame) {
-          // Compute a bbox delta based on accuracy (meters -> degrees). 1 deg ~ 111.32 km
-          const accuracyMeters = accuracy || 50; // fallback
-          const metersToDeg = (m) => m / 111320;
-          // use a slightly larger bbox than accuracy to provide context
-          let delta = Math.max(metersToDeg(accuracyMeters) * 1.6, 0.0015);
-          // clamp delta to reasonable zoom levels
-          delta = Math.min(Math.max(delta, 0.0015), 0.05);
-
-          const left = longitude - delta;
-          const right = longitude + delta;
-          const bottom = latitude - delta;
-          const top = latitude + delta;
-
-          // Encode marker as lat,lon
-          const marker = encodeURIComponent(`${latitude},${longitude}`);
-          const src = `https://www.openstreetmap.org/export/embed.html?bbox=${left}%2C${bottom}%2C${right}%2C${top}&layer=mapnik&marker=${marker}`;
-          mapFrame.src = src;
-        }
       },
       (error) => {
         coordsEl.innerText = "Position introuvable.";
@@ -376,48 +533,107 @@ class WakatKoomApp {
     );
   }
 
-  sendWaterCutReport() {
+  async reverseGeocode(latitude, longitude, accuracy) {
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`, {
+        headers: { Accept: "application/json" }
+      });
+      const data = await response.json();
+      const address = data.display_name || "Adresse non détectée";
+      this.currentAddress = address;
+      this.currentCity = data.address?.city || data.address?.town || data.address?.village || "Ouagadougou";
+      const coordsEl = document.getElementById("sos-coordinates");
+      if (coordsEl) {
+        coordsEl.innerText = `${address}\nPrécision GPS: ${Math.round(accuracy || 0)} m`;
+      }
+    } catch (error) {
+      console.warn("Géocodage refusé", error);
+    }
+  }
+
+  async sendWaterCutReport() {
     const coordsEl = document.getElementById("sos-coordinates");
-    if (!navigator.geolocation) {
-      coordsEl.innerText = "Géolocalisation non supportée.";
-      window.WakatKoomVoice.speak("La géolocalisation n'est pas disponible sur votre navigateur.", null);
-      return;
+    const reportButton = document.getElementById("btn-sos-report");
+    if (reportButton) {
+      reportButton.disabled = true;
+      reportButton.innerHTML = '<i data-lucide="loader"></i> Envoi…';
+      lucide.createIcons();
     }
 
-    coordsEl.innerText = "Envoi du signalement à ONEA…";
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        coordsEl.innerText = `Signalement envoyé : ${latitude.toFixed(5)}°, ${longitude.toFixed(5)}°`;
-        window.WakatKoomVoice.speak("Le signalement de la coupure d'eau a été envoyé à ONEA. Ils vont traiter la panne.", null);
-        this.showToastMessage("Signalement envoyé à ONEA.");
-        const confirmationPanel = document.getElementById("sos-confirmation-panel");
-        const reportButton = document.getElementById("btn-sos-report");
-        if (reportButton) {
-          reportButton.disabled = true;
-          reportButton.style.opacity = "0.6";
-          reportButton.style.cursor = "not-allowed";
-        }
-        if (confirmationPanel) {
-          confirmationPanel.hidden = false;
-          confirmationPanel.classList.remove('show');
-          const resolvedBtn = document.getElementById("btn-sos-resolved");
-          const confirmationText = document.getElementById("sos-confirmation-text");
-          if (resolvedBtn) {
-            resolvedBtn.hidden = false;
-          }
-          if (confirmationText) {
-            confirmationText.innerText = "Votre signalement a bien été reçu par ONEA. Appuyez sur 'Panne résolue' lorsque le service vous confirme la réparation.";
-          }
-        }
-      },
-      (error) => {
-        coordsEl.innerText = "Envoi impossible.";
-        window.WakatKoomVoice.speak("Impossible d'envoyer le signalement sans localisation. Activez votre GPS.", null);
-        console.warn("Erreur géolocalisation pour envoi :", error);
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    try {
+      const coordinates = await this.getCurrentCoordinates();
+      const formData = new FormData();
+      formData.append("name", "Utilisateur WakatKoom");
+      formData.append("phone", "");
+      formData.append("problem_type", "Coupure d'eau");
+      formData.append("description", "Signalement vocal et géolocalisé envoyé depuis WakatKoom");
+      formData.append("latitude", String(coordinates.latitude));
+      formData.append("longitude", String(coordinates.longitude));
+      formData.append("address", this.currentAddress || "Adresse non détectée");
+      formData.append("district", this.currentAddress || "");
+      formData.append("sector", "");
+      formData.append("city", this.currentCity || "Ouagadougou");
+      if (this.sosAudioBlob) {
+        formData.append("audio", this.sosAudioBlob, "message.webm");
+      }
+      if (this.sosPhotoFile) {
+        formData.append("photo", this.sosPhotoFile, this.sosPhotoFile.name);
+      }
+
+      const response = await fetch("http://127.0.0.1:8000/api/reports", { method: "POST", body: formData });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.detail || "Échec d'envoi");
+
+      const tracking = payload.report?.tracking_number || "inconnu";
+      if (coordsEl) {
+        coordsEl.innerText = `Signalement envoyé. Suivi : ${tracking}`;
+      }
+      window.WakatKoomVoice.speak(`Signalement envoyé à la ONEA. Votre numéro de suivi est ${tracking}.`, null);
+      this.showToastMessage(`Signalement envoyé. Suivi ${tracking}`);
+      this.homeAlertActive = false;
+      this.renderHomeDashboard();
+      const confirmationPanel = document.getElementById("sos-confirmation-panel");
+      if (confirmationPanel) {
+        confirmationPanel.hidden = false;
+      }
+    } catch (error) {
+      if (coordsEl) {
+        coordsEl.innerText = "Envoi impossible. Vérifiez la connexion au serveur.";
+      }
+      window.WakatKoomVoice.speak("Le signalement n'a pas pu être envoyé. Vérifiez votre connexion et réessayez.", null);
+      this.showToastMessage("Envoi impossible");
+    } finally {
+      if (reportButton) {
+        reportButton.disabled = false;
+        reportButton.innerHTML = '<i data-lucide="send"></i> Signaler ONEA';
+        lucide.createIcons();
+      }
+    }
+  }
+
+  triggerSOSAlertFinal() {
+    window.WakatKoomVoice.playSiren(5);
+    window.WakatKoomVoice.speak(
+      "SOS activé ! Votre position GPS a été envoyée par SMS d'urgence à la police ainsi qu'à Fatou et Inoussa. L'application reste en veille sonore.",
+      null
     );
+
+    if (navigator.vibrate) {
+      navigator.vibrate([500, 250, 500, 250, 500]);
+    }
+
+    document.getElementById("sos-coordinates").innerText = "Ouagadougou (12.3714° N, 1.5197° W) - SMS Envoyé";
+  }
+
+  cancelSOS() {
+    this.homeAlertActive = false;
+    this.renderHomeDashboard();
+    clearInterval(this.sosTimer);
+    window.WakatKoomVoice.stopSpeaking();
+    window.WakatKoomVoice.playBeep(330, 150);
+    window.WakatKoomVoice.speak("Alerte annulée.", () => {
+      this.navigate("screen-home");
+    });
   }
 
   showToastMessage(message) {
@@ -436,6 +652,8 @@ class WakatKoomApp {
   }
 
   markSOSResolved() {
+    this.homeAlertActive = false;
+    this.renderHomeDashboard();
     const confirmationText = document.getElementById("sos-confirmation-text");
     const sosResolved = document.getElementById("btn-sos-resolved");
     if (confirmationText) {
@@ -456,11 +674,15 @@ class WakatKoomApp {
     const aiMicBtn = document.getElementById("btn-ai-mic");
     const aiResponseText = document.getElementById("ai-response-text");
     const userSpeechText = document.getElementById("ai-user-speech-text");
-    const aiAvatar = document.getElementById("ai-avatar-element").parentElement;
+    const aiAvatar = document.getElementById("ai-avatar-element")?.parentElement;
 
-    aiTrigger.addEventListener("click", () => {
-      this.navigate("screen-ai");
-    });
+    if (aiTrigger) {
+      aiTrigger.addEventListener("click", () => {
+        this.navigate("screen-ai");
+      });
+    }
+
+    if (!aiMicBtn || !aiResponseText || !userSpeechText || !aiAvatar) return;
 
     // Clic sur le micro de l'IA
     aiMicBtn.addEventListener("click", () => {

@@ -10,8 +10,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <!-- Lucide Icons CDN -->
   <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <!-- Stylesheets -->
   <link rel="stylesheet" href="css/styles.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
 
@@ -82,50 +84,22 @@
             </div>
           </div>
 
-          <!-- Contacts Content -->
+          <!-- Home Dashboard Content -->
           <div class="screen-content scrollable">
-            <div class="section-title-container">
-              <h2 class="section-title">À qui voulez-vous parler ?</h2>
-              <p class="section-subtitle">Touchez une photo pour envoyer un message</p>
-            </div>
-
-            <div class="home-callout">
-              <p class="home-callout-text">Coupure d'eau ? Signalez votre position à ONEA directement depuis ici.</p>
-              <button class="btn-home-onea" id="btn-sos-trigger-home" title="Signalement ONEA">
-                <i data-lucide="alert-triangle"></i>
-                <span>Signalement ONEA</span>
-              </button>
-            </div>
-
-            <div class="settings-toggle-item home-voice-toggle">
-              <div>
-                <span class="toggle-title">Assistant vocal</span>
-                <span class="toggle-desc">Activer ou désactiver les réponses vocales de l'assistant depuis l'accueil.</span>
+            <div class="home-dashboard">
+              <div class="home-hero-card">
+                <div class="hero-flag">
+                  <i data-lucide="volume-2"></i>
+                  <span>Accessible</span>
+                </div>
+                <h2>Parlez, écoutez, agissez</h2>
+                <p>Un tableau de bord simple pour envoyer des messages vocaux, appeler ou signaler une coupure d'eau.</p>
               </div>
-              <label class="switch">
-                <input type="checkbox" id="home-voice-assistant-toggle" checked>
-                <span class="slider round"></span>
-              </label>
-            </div>
 
-            <!-- Contacts Grid -->
-            <div class="contacts-grid" id="contacts-list">
-              <!-- Dynamically populated from JS -->
+              <div class="dashboard-grid" id="home-dashboard-grid">
+                <!-- Dynamically populated from JS -->
+              </div>
             </div>
-          </div>
-
-          <!-- Home Action Panel (ONEA signal reporting + AI Floating Buttons) -->
-          <div class="bottom-action-panel">
-            <button class="sos-action-btn" id="btn-sos-trigger" title="Signalement ONEA">
-              <i data-lucide="alert-triangle"></i>
-              <span>Signalement ONEA</span>
-            </button>
-            
-            <button class="ai-action-btn" id="btn-ai-trigger" title="Assistant IA WakatKoom">
-              <div class="ai-btn-glow"></div>
-              <i data-lucide="bot"></i>
-              <span>Assistant IA</span>
-            </button>
           </div>
         </div>
 
@@ -267,9 +241,19 @@
 
             <div class="sos-map-container">
               <div class="sos-map-label">Carte de localisation</div>
-              <!-- Default view: Ouagadougou area (longitude is negative) -->
-              <iframe id="sos-map-iframe" class="sos-map-iframe" src="https://www.openstreetmap.org/export/embed.html?bbox=-1.5297%2C12.3664%2C-1.5097%2C12.3814&layer=mapnik&marker=12.3714%2C-1.5197" title="Carte de localisation ONEA"></iframe>
+              <div id="sos-map" class="sos-map-iframe"></div>
             </div>
+
+            <div class="sos-media-row">
+              <button class="btn-sos-media" id="btn-sos-record">
+                <i data-lucide="mic"></i> <span>Enregistrer</span>
+              </button>
+              <button class="btn-sos-media secondary" id="btn-sos-photo">
+                <i data-lucide="camera"></i> <span>Photo</span>
+              </button>
+              <input type="file" id="sos-photo-input" accept="image/*" hidden>
+            </div>
+            <div id="sos-photo-preview" class="sos-photo-preview"></div>
 
             <div class="sos-action-row">
               <button class="btn-sos-report" id="btn-sos-report">
@@ -441,6 +425,7 @@
         <div><i data-lucide="check-circle-2"></i> <span><strong>Enregistrement micro :</strong> Enregistrez de vrais messages vocaux locaux pour les écouter.</span></div>
         <div><i data-lucide="check-circle-2"></i> <span><strong>Traduction :</strong> Traduisez instantanément en Mooré, Dioula et Fulfuldé.</span></div>
       </div>
+      <a href="admin.html" class="admin-link" target="_blank">Ouvrir le tableau de bord ONEA</a>
       <p class="voice-setup-hint">💡 <em>Pour une expérience optimale, autorisez l'accès au microphone lorsque le navigateur vous le demande.</em></p>
     </div>
   </div>
