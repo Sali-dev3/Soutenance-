@@ -147,16 +147,16 @@ class WakatKoomApp {
       this.navigate("screen-home");
     });
 
-    // Alerte notification (simulation)
+    // Alerte notification ONEA (simulation)
     document.getElementById("btn-notifications").addEventListener("click", () => {
       this.triggerVibration();
-      window.WakatKoomVoice.speak("Vous n'avez aucun nouveau message non lu pour le moment.", null);
+      window.WakatKoomVoice.speak("Aucun nouveau signalement ONEA pour le moment.", null);
     });
 
     // Bouton profil
     document.getElementById("btn-my-profile").addEventListener("click", () => {
       this.triggerVibration();
-      window.WakatKoomVoice.speak("Votre profil. Vous vous appelez Diallo. Votre numéro est le 70 00 00 00.", null);
+      window.WakatKoomVoice.speak("Votre espace ONEA. Ce service aide à signaler les coupures et suivre les réparations.", null);
     });
   }
 
@@ -165,108 +165,84 @@ class WakatKoomApp {
     const listContainer = document.getElementById("home-dashboard-grid");
     if (!listContainer) return;
 
+    const oneaContact = {
+      name: "ONEA Hotline",
+      avatar: "",
+      phone: ""
+    };
+
     const actions = [
-      {
-        id: "voice",
-        title: "Envoyer un message vocal",
-        description: "Ouvre directement l'enregistrement vocal.",
-        icon: "mic",
-        variant: "voice",
-        badge: null,
-        onClick: () => {
-          const contact = window.CONTACTS.find(item => item.id === 1) || window.CONTACTS[0];
-          window.WakatKoomChat.openConversation(contact);
-          this.navigate("screen-chat");
-          window.WakatKoomVoice.speak("Appuyez pour enregistrer votre message vocal.", null);
-        }
-      },
-      {
-        id: "assistant",
-        title: "Assistant vocal IA",
-        description: "Suggestions vocales et avatar animé.",
-        icon: "bot",
-        variant: "assistant",
-        badge: null,
-        onClick: () => {
-          this.navigate("screen-ai");
-          window.WakatKoomVoice.speak("Assistant vocal activé. Dites simplement ce que vous voulez faire.", null);
-        }
-      },
       {
         id: "sos",
         title: "Signaler une coupure d'eau",
-        description: "Accès rapide au module ONEA et au GPS.",
-        icon: "droplets",
+        description: "Envoyez un signalement GPS à ONEA avec photo et audio.",
+        icon: "alert-triangle",
         variant: "sos",
         badge: this.homeAlertActive ? "●" : null,
         onClick: () => {
           this.startSOS();
+          window.WakatKoomVoice.speak("Préparation du signalement ONEA. Ouvrez la page SOS.", null);
         }
       },
       {
-        id: "position",
-        title: "Ma position",
-        description: "Carte OpenStreetMap et géolocalisation.",
+        id: "status",
+        title: "Suivi des signalements",
+        description: "Voir l'état des signalements envoyés à ONEA.",
+        icon: "list-check",
+        variant: "status",
+        badge: null,
+        onClick: () => {
+          this.navigate("screen-chat");
+          window.WakatKoomVoice.speak("Affichage du suivi ONEA.", null);
+        }
+      },
+      {
+        id: "map",
+        title: "Carte des coupures",
+        description: "Localisez votre position et les zones touchées.",
         icon: "map-pin",
         variant: "position",
         badge: null,
         onClick: () => {
           this.navigate("screen-sos");
           this.updateCurrentLocation();
-          window.WakatKoomVoice.speak("Votre position actuelle est affichée sur la carte.", null);
+          window.WakatKoomVoice.speak("Carte ONEA ouverte. Mise à jour de la localisation.", null);
         }
       },
       {
-        id: "messages",
-        title: "Écouter mes messages",
-        description: "Lecture automatique des messages vocaux reçus.",
-        icon: "play-circle",
-        variant: "messages",
-        badge: null,
-        onClick: () => {
-          const contact = window.CONTACTS.find(item => item.id === 1) || window.CONTACTS[0];
-          window.WakatKoomChat.openConversation(contact);
-          this.navigate("screen-chat");
-          const lastReceived = contact.messages.filter(msg => msg.sender === "them").slice(-1)[0];
-          if (lastReceived) {
-            window.WakatKoomVoice.speak(`Vous avez un nouveau message de ${contact.name}. ${lastReceived.text}`, null);
-          }
-        }
-      },
-      {
-        id: "language",
-        title: "Changer la langue",
-        description: "Français, Mooré, Dioula, Fulfuldé et English.",
-        icon: "languages",
-        variant: "language",
-        badge: null,
-        onClick: () => {
-          this.navigate("screen-settings");
-          window.WakatKoomVoice.speak("Choisissez votre langue préférée.", null);
-        }
-      },
-      {
-        id: "call",
-        title: "Appel vocal",
-        description: "Lance rapidement un appel vocal simplifié.",
+        id: "hotline",
+        title: "Hotline ONEA",
+        description: "Appelez la hotline ONEA pour assistance.",
         icon: "phone",
         variant: "call",
         badge: null,
         onClick: () => {
-          const contact = window.CONTACTS.find(item => item.id === 1) || window.CONTACTS[0];
-          this.startCall(contact, false);
+          this.startCall(oneaContact, false);
+          window.WakatKoomVoice.speak("Appel vers la hotline ONEA en cours.", null);
+        }
+      },
+      {
+        id: "assistant",
+        title: "Assistant vocal ONEA",
+        description: "Utilisez la voix pour signaler et consulter votre dossier.",
+        icon: "bot",
+        variant: "assistant",
+        badge: null,
+        onClick: () => {
+          this.navigate("screen-ai");
+          window.WakatKoomVoice.speak("Assistant ONEA activé. Que souhaitez-vous faire ?", null);
         }
       },
       {
         id: "settings",
         title: "Paramètres",
-        description: "Accessibilité, taille, vibrations et synthèse vocale.",
+        description: "Gérez la langue et l'accessibilité.",
         icon: "sliders",
         variant: "settings",
         badge: null,
         onClick: () => {
           this.navigate("screen-settings");
-          window.WakatKoomVoice.speak("Paramètres d'accessibilité et de confort.", null);
+          window.WakatKoomVoice.speak("Paramètres ONEA affichés.", null);
         }
       }
     ];
@@ -336,6 +312,15 @@ class WakatKoomApp {
     if (locationBtn) {
       locationBtn.addEventListener("click", () => {
         this.updateCurrentLocation();
+      });
+    }
+
+    const statusRefresh = document.getElementById("btn-status-refresh");
+    if (statusRefresh) {
+      statusRefresh.addEventListener("click", () => {
+        this.navigate("screen-sos");
+        this.updateCurrentLocation();
+        window.WakatKoomVoice.speak("Actualisation de la carte ONEA.", null);
       });
     }
 
@@ -739,34 +724,21 @@ class WakatKoomApp {
         break;
         
       case "CALL":
-        this.navigate("screen-home"); // Reset screen state
+        this.navigate("screen-home");
         setTimeout(() => {
           this.startCall(command.arg, false);
         }, 300);
         break;
 
       case "OPEN_CHAT":
-        window.WakatKoomChat.openConversation(command.arg);
         this.navigate("screen-chat");
+        window.WakatKoomVoice.speak("Voici le suivi de vos signalements ONEA.", null);
         break;
 
-      case "READ_MESSAGES":
-        // Si on est dans un chat
-        if (this.currentScreenId === "screen-chat" && window.WakatKoomChat.activeContact) {
-          const msgs = window.WakatKoomChat.getSavedMessages(window.WakatKoomChat.activeContact.id);
-          const themMsgs = msgs.filter(m => m.sender === "them");
-          if (themMsgs.length > 0) {
-            const lastMsg = themMsgs[themMsgs.length - 1];
-            window.WakatKoomVoice.speak(`Le dernier message de ${window.WakatKoomChat.activeContact.name} est : ${lastMsg.text}`, null);
-            responseTextContainer.innerText = `Lecture du message de ${window.WakatKoomChat.activeContact.name}.`;
-          } else {
-            window.WakatKoomVoice.speak("Vous n'avez pas reçu de messages dans cette discussion.", null);
-          }
-        } else {
-          // Sinon lire le tout dernier message général
-          window.WakatKoomVoice.speak("Vous avez un nouveau message de Maman. Elle dit : Bonjour mon fils, as-tu pris mes médicaments ?", null);
-          responseTextContainer.innerText = "Lecture du nouveau message de Fatou (Maman).";
-        }
+      case "OPEN_MAP":
+        this.navigate("screen-sos");
+        this.updateCurrentLocation();
+        window.WakatKoomVoice.speak("Carte ONEA ouverte. Mise à jour de votre position.", null);
         break;
 
       case "GO_HOME":
@@ -790,23 +762,28 @@ class WakatKoomApp {
 
   // --- LOGIQUE D'APPEL DIRECTS (VOIX & VIDÉO) ---
   bindCallEvents() {
-    // Boutons de déclenchement dans l'en-tête du chat
-    document.getElementById("btn-chat-call").addEventListener("click", () => {
-      if (window.WakatKoomChat.activeContact) {
-        this.startCall(window.WakatKoomChat.activeContact, false);
-      }
-    });
+    const chatCallButton = document.getElementById("btn-chat-call");
+    if (chatCallButton) {
+      chatCallButton.addEventListener("click", () => {
+        const contact = { name: "ONEA Hotline", avatar: "", phone: "" };
+        this.startCall(contact, false);
+      });
+    }
 
-    document.getElementById("btn-chat-video").addEventListener("click", () => {
-      if (window.WakatKoomChat.activeContact) {
-        this.startCall(window.WakatKoomChat.activeContact, true);
-      }
-    });
+    const chatVideoButton = document.getElementById("btn-chat-video");
+    if (chatVideoButton) {
+      chatVideoButton.addEventListener("click", () => {
+        const contact = { name: "ONEA Hotline", avatar: "", phone: "" };
+        this.startCall(contact, true);
+      });
+    }
 
     const callBack = document.getElementById("btn-call-back");
     if (callBack) {
       callBack.addEventListener("click", () => {
-        this.hangupCall();
+        this.stopWebcam();
+        window.WakatKoomVoice.stopSpeaking();
+        this.navigate("screen-home");
       });
     }
 
@@ -903,8 +880,8 @@ class WakatKoomApp {
     
     window.WakatKoomVoice.playBeep(330, 200); // Bip de fermeture
 
-    // Retour au chat
-    this.navigate("screen-chat");
+    // Retour à l'écran d'accueil
+    this.navigate("screen-home");
   }
 
   startWebcam(videoContainer) {

@@ -135,42 +135,28 @@ class WakatKoomVoiceManager {
     console.log("Commande vocale reçue :", text);
 
     // 1. Commande SOS / ONEA
-    if (text.includes("sos") || text.includes("urgence") || text.includes("danger") || text.includes("police") || text.includes("onea") || text.includes("signalement")) {
+    if (text.includes("sos") || text.includes("urgence") || text.includes("danger") || text.includes("panne") || text.includes("coupure") || text.includes("signaler")) {
       return { action: "SOS", arg: null };
     }
 
-    // 2. Commande Appeler un contact
-    if (text.includes("appelle") || text.includes("appeler") || text.includes("téléphone à")) {
-      // Trouver le nom du contact
-      const contact = window.CONTACTS.find(c => {
-        const namePart = c.name.split(" ")[0].toLowerCase(); // Ex: fatou
-        return text.includes(namePart);
-      });
-      if (contact) {
-        return { action: "CALL", arg: contact };
-      } else {
-        return { action: "SPEAK", arg: "Je n'ai pas trouvé ce contact dans votre répertoire." };
-      }
+    // 2. Commande Appeler la hotline ONEA
+    if ((text.includes("appelle") || text.includes("appeler") || text.includes("téléphone à")) && (text.includes("onea") || text.includes("hotline") || text.includes("onea hotline"))) {
+      const contact = { name: "ONEA Hotline", avatar: "", phone: "" };
+      return { action: "CALL", arg: contact };
     }
 
-    // 3. Commande Ouvrir discussion
-    if (text.includes("message à") || text.includes("parle à") || text.includes("ouvrir")) {
-      const contact = window.CONTACTS.find(c => {
-        const namePart = c.name.split(" ")[0].toLowerCase();
-        return text.includes(namePart);
-      });
-      if (contact) {
-        return { action: "OPEN_CHAT", arg: contact };
-      }
+    // 3. Commande Ouvrir le suivi ONEA
+    if (text.includes("suivi") || text.includes("statut") || text.includes("signalement") || text.includes("dossier")) {
+      return { action: "OPEN_CHAT", arg: null };
     }
 
-    // 4. Commande Lire les messages
-    if (text.includes("lis") || text.includes("lire") || text.includes("message")) {
-      return { action: "READ_MESSAGES", arg: null };
+    // 4. Commande Ouvrir la carte ONEA
+    if (text.includes("carte") || text.includes("position") || text.includes("localisation")) {
+      return { action: "OPEN_MAP", arg: null };
     }
 
     // 5. Commande Assistant
-    if (text.includes("assistant") || text.includes("aide") || text.includes("wakatkoom")) {
+    if (text.includes("assistant") || text.includes("aide") || text.includes("onea")) {
       return { action: "OPEN_AI", arg: null };
     }
 
@@ -179,23 +165,23 @@ class WakatKoomVoiceManager {
       return { action: "GO_HOME", arg: null };
     }
 
-    // 7. Réponses d'assistance générique (Assistant WakatKoom)
+    // 7. Réponses d'assistance générique
     if (text.includes("bonjour") || text.includes("salut")) {
-      return { action: "SPEAK", arg: "Bonjour ! Comment puis-je vous aider aujourd'hui ? Vous pouvez me dire d'appeler quelqu'un." };
+      return { action: "SPEAK", arg: "Bonjour ! Je suis l'assistant ONEA. Je peux vous aider à signaler une coupure ou consulter votre signalement." };
     }
     
     if (text.includes("qui es-tu") || text.includes("ton nom")) {
-      return { action: "SPEAK", arg: "Je suis WakatKoom, votre assistant intelligent. Je vous aide à envoyer des messages vocaux et appeler vos proches sans lire ni écrire." };
+      return { action: "SPEAK", arg: "Je suis l'assistant ONEA. Je vous aide à signaler une coupure et à suivre l'état des réparations." };
     }
 
     if (text.includes("météo") || text.includes("temps")) {
-      return { action: "SPEAK", arg: "Il fait beau et chaud à Ouagadougou, environ 35 degrés. C'est une belle journée." };
+      return { action: "SPEAK", arg: "Je suis spécialisé dans les signalements ONEA. Dites 'signaler une coupure' ou 'suivi des signalements'." };
     }
 
     // Sinon, réponse d'incompréhension intelligente
     return { 
       action: "SPEAK", 
-      arg: "Je n'ai pas tout à fait compris. Dites 'Appelle Maman' ou dites 'SOS' en cas d'urgence." 
+      arg: "Je n'ai pas tout à fait compris. Dites 'signaler une coupure' ou 'appelle ONEA'." 
     };
   }
 
